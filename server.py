@@ -4,18 +4,20 @@ import redis
 import os
 
 class App(object):
-    def __init__(self, db_conn):
-        self.db_conn=db_conn
+    def __init__(self, db_url):
+        self.db_conn = redis.from_url(db_url)
 
     @cherrypy.expose
     def index(self):
-        return 'foo: '+str(db.smembers('foo'))
+        return 'foo: '+str(self.db_conn.smembers('foo'))
 
-db = redis.from_url(os.environ.get('REDISCLOUD_URL'))
+app = App(
+    db_url=os.environ.get('REDISCLOUD_URL'),
+)
 
 cherrypy.config.update({
     'server.socket_host': '0.0.0.0',
     'server.socket_port': int(os.environ.get('PORT', '5000')),
     'tools.proxy.on': True,
 })
-cherrypy.quickstart(App(db_conn=db))
+cherrypy.quickstart(app)

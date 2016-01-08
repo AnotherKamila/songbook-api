@@ -10,3 +10,6 @@ venv/
 
 # logfiles
 *.log
+
+# local configuration in .env
+.env
