@@ -1,0 +1,14 @@
+HMSET song:42:v0  title 'The Answer to Life, the Universe, and Everything' author 'Douglas Adams'
+SET   song:42     song:42:v0
+
+HMSET song:47:v42 title 'A Random Song'
+SET   song:47     song:47:v42
+
+HMSET song:foo:v0 title bar author baz text quux
+SET   song:foo    song:foo:v0
+
+SADD  book:sub:v0 song:foo
+SET   book:sub    book:sub:v0
+
+SADD  book:testbook:v0 song:42 song:47 book:sub
+SET   book:testbook book:testbook:v0
