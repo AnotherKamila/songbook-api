@@ -18,3 +18,5 @@ Note: This is the API server. The web frontend is [AnotherKamila/songbook-web](h
 - always do stuff inside the venv (don't forget to activate it)
 - start server with `python ./server.py` (or `heroku local`)
   - automatically reloads when sources change
+- requires the `REDISCLOUD_URL` environment variable to be set to your Redis URL
+- read `database.md` for the data model and how stuff is stored

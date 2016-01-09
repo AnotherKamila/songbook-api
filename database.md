@@ -52,4 +52,4 @@ Note about usage: when creating something, this key will be generated and stored
 
 --------------------------------------------------------------------------------
 
-Note/TODO: Keeping old versions means there will be a lot of old versions. GC'ing unused stuff might be a good idea, but problem: what is "unused"?
+Note/TODO: Keeping old versions means there will be a lot of old versions. GC'ing unused stuff might be a good idea, but problem: what is "unused"? -- will worry about this when I run out of space :D
