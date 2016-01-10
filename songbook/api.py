@@ -1,51 +1,53 @@
-import cherrypy
-from .models import KEYSEP
+from . import models
 
-# TODO this is ugly and coupled and just horrible and would break if anyone ever decided to refactor this
-def key2url(key): return '/'+key.replace(KEYSEP, '/')
-def key2type(key): return key.split(KEYSEP)[0]
+import cherrypy
+
+def ref2url(ref): return '/' + '/'.join(ref)
+
+def json_friendly(obj):
+    """Converts Python objects into similar objects which can be JSONified."""
+    if isinstance(obj, models.Ref):
+        return repr(obj)
+    if isinstance(obj, (set, list, tuple)):
+        return [ json_friendly(x) for x in obj ]
+    if isinstance(obj, dict):
+        return { json_friendly(k): json_friendly(v) for k, v in obj.items() }
+    if isinstance(obj, (bytes, bytearray)):
+        return obj.decode(encoding='UTF-8')
+    else:
+        return obj
+
+class http_viewer:
+    """Translates models into HTTP responses."""
+    def OK(data):
+        return json_friendly(data.contents)
+
+    def Alias(to):
+        raise cherrypy.HTTPRedirect(ref2url(to), 302)
+
+    def NotFound(err):
+        if isinstance(err, Exception):
+            raise cherrypy.NotFound from err
+        else:
+            raise cherrypy.NotFound(err)
 
 @cherrypy.tools.json_in()
 @cherrypy.tools.json_out()
-class Resource(object):
+class Root(object):
     exposed = True
 
-    def __init__(self, **kwargs):
-        self.args = kwargs
+    def __init__(self, db_conn):
+        self.db = db_conn
 
-    @property
-    def modelCls(self):
+    def GET(self, *args):
+        ref = models.Ref(args)
+        if len(ref) < 2: return { 'api_docs': 'TODO' }
+
+        typename = ref[models.Ref.TYPE]
         try:
-            return self._modelCls
-        except AttributeError:
-            self._modelCls = getattr(cherrypy.request.app.root.args['models'], self.__class__.__name__)
-            return self._modelCls
-
-    def url(self, id):
-        return '/'+self.modelCls(id).ref(sep='/')
-
-    @cherrypy.popargs('id')
-    @cherrypy.popargs('version')
-    def GET(self, id=None, version=None):
-        if not id:
-            try:
-                self.index()
-            except AttributeError:
-                raise cherrypy.NotFound()
-
-        model = self.modelCls(id, version)
-        model.load()
-        return model.contents
-
-class Book(Resource):
-    def GET(self, id=None, version=None):
-        return [ { 'type': key2type(x), 'url': key2url(x) } for x in super().GET(id, version) ]
-
-class Song(Resource): pass
-
-class Root(Resource):
-    book = Book()    
-    song = Song()
+            return models.type_map[typename].load(self.db, ref).view(http_viewer)
+        except (KeyError, models.NotFound) as e:
+            http_viewer.NotFound(e)
 
 cpconfig = {
     '/': {
