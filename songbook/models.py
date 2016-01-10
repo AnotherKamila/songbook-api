@@ -1,4 +1,4 @@
-KEYSEP = ':'
+KEYSEP = '/'
 
 class Ref(tuple):
     """Uniquely identifies an object stored in the database.
