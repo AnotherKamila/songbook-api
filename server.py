@@ -13,5 +13,6 @@ cherrypy.config.update({
     'server.socket_host': '0.0.0.0',
     'server.socket_port': int(os.environ.get('PORT', '5000')),
     'tools.proxy.on': True,
+    'tools.proxy.local': 'Host',  # which header to look at for the local address
 })
 cherrypy.quickstart(api.Root(db_conn=db_conn), '/', api.cpconfig)
