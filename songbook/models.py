@@ -9,7 +9,7 @@ class Ref(tuple):
     TYPE = 0  # index of type in the ref field
 
     def __init__(self, args):
-        assert isinstance(args, (tuple, list)), 'you are ugly'
+        assert isinstance(args, (tuple, list)) and len(args) > 0, 'you are ugly'
         args = [ str(x) for x in args ]
         tuple.__init__(args)
 

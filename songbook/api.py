@@ -40,8 +40,8 @@ class Root(object):
         self.db = db_conn
 
     def GET(self, *args):
+        if len(args) < 2: return { 'api_docs': 'TODO' }
         ref = models.Ref(args)
-        if len(ref) < 2: return { 'api_docs': 'TODO' }
 
         typename = ref[models.Ref.TYPE]
         try:
