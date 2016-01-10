@@ -8,10 +8,10 @@ class Ref(tuple):
     """
     TYPE = 0  # index of type in the ref field
 
-    def __init__(self, args):
-        assert isinstance(args, (tuple, list)) and len(args) > 0, 'you are ugly'
-        args = [ str(x) for x in args ]
-        tuple.__init__(args)
+    def __new__(cls, arg):
+        assert isinstance(arg, (tuple, list)) and len(arg) > 0, 'you are ugly'
+        arg = [ x.decode(encoding='UTF-8') if isinstance(x, (bytes,bytearray)) else str(x) for x in arg ]
+        return tuple.__new__(cls, arg)
 
     @classmethod
     def from_str(cls, s):
@@ -30,7 +30,7 @@ class Model:
 
     def __init__(self, ref):
         ref = Ref(ref)
-        assert self.typename == ref[self.REF_TYPE], \
+        assert self.TYPENAME == ref[self.REF_TYPE], \
             'Cannot load "{}" as {}'.format(ref, self.__class__.__name__)
         self.ref = ref
         self.id = ref[self.REF_ID]
@@ -50,41 +50,39 @@ class VersionedMixin:
         self.version = None
         if len(ref) > self.REF_VERSION:
             self.version = ref[self.REF_VERSION]
-        self.live_version = self.version
+        self.resolved_version = self.version
+        if len(ref) > self.REF_VERSION + 1: raise NotFound
 
     def resolve_version(self, db, ref):
-        if self.live_version is None:
-            live_ref = db.get(self.ref)
-            print('VersionedMixin: resolved version:', self.ref, '->', live_ref)
-            if live_ref is None: raise NotFound
-            live_ref = Ref.from_str(live_ref)
-            self.live_version = live_ref[self.REF_VERSION]
+        if self.resolved_version is None:
+            self.resolved_version = db.get(self.ref)
+            print('VersionedMixin: resolving version:', self.ref, '->', self.resolved_version)
 
-    def live_ref(self):
-        return Ref((self.typename, self.id, self.live_version))
+    def resolved_ref(self):
+        return Ref((self.TYPENAME, self.id, self.resolved_version))
 
     @classmethod
-    def load_versioned_with_op(cls, db, ref, operation):
+    def load_versioned_with_op(cls, db, ref, load_op):
         x = cls(ref)
         x.resolve_version(db, ref)
-        if not x.live_version: raise NotFound
-        print('loading from DB:', x.live_ref())
-        x.contents = operation(x.live_ref())
+        if not x.resolved_version: raise NotFound
+        print('loading from DB:', x.resolved_ref())
+        x.contents = load_op(x.resolved_ref())
         if not x.contents: raise NotFound
         return x
 
     def view(self, viewer):
         """May only be called after `load()`."""
-        if self.version == self.live_version:
+        if self.version == self.resolved_version:
             return viewer.OK(self)
         else:
-            return viewer.Alias(self.live_ref())
+            return viewer.Alias(self.resolved_ref())
 
 type_map = {}
 
 def model_typename(typename):
     def _model_typename(cls):
-        cls.typename = typename
+        cls.TYPENAME = typename
         type_map[typename] = cls
     return _model_typename
 

@@ -31,17 +31,13 @@ Data types
 ### Book (Songbook)
 
 `book:<id>:v<version> => { book:<id>|song:<id> }` -- a book may contain other books
-
-The newest version is aliased by `book:<id>` => `book:<id>:v<newest-version>`
-
+`book:<id> => <newest-version-number>` -- for the version-less alias
 `book:<id>:unlisted => <whatever>` -- if key exists, this songbook will not be listed in the songbook index
 
 ### Song
 
 `song:<id>:v<version> => M{ text: <text>, title: <title>, author: <author>, … }` -- all song metadata, used for the search index; and raw song text (as submitted -- not parsed)
-
-The newest version is aliased by `song:<id>` => `song:<id>:v<newest-version>`
-
+`song:<id> => <newest-version-number>` -- for the version-less alias
 `song:<id>:unlisted => <whatever>` -- if key exists, this song will not be listed in the default songbook
 
 ### Authentication keys
