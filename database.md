@@ -30,19 +30,19 @@ Data types
 
 ### Book (Songbook)
 
-`book:<id>:v<version> => { book:<id>|song:<id> }` -- a book may contain other books
-`book:<id> => <newest-version-number>` -- for the version-less alias
-`book:<id>:unlisted => <whatever>` -- if key exists, this songbook will not be listed in the songbook index
+- `book:<id>:v<version> => { book:<id>|song:<id> }` -- a book may contain other books
+- `book:<id> => <newest-version-number>` -- for the version-less alias
+- `book:<id>:unlisted => <whatever>` -- if key exists, this songbook will not be listed in the songbook index
 
 ### Song
 
-`song:<id>:v<version> => M{ text: <text>, title: <title>, author: <author>, … }` -- all song metadata, used for the search index; and raw song text (as submitted -- not parsed)
-`song:<id> => <newest-version-number>` -- for the version-less alias
-`song:<id>:unlisted => <whatever>` -- if key exists, this song will not be listed in the default songbook
+- `song:<id>:v<version> => M{ text: <text>, title: <title>, author: <author>, … }` -- all song metadata, used for the search index; and raw song text (as submitted -- not parsed)
+- `song:<id> => <newest-version-number>` -- for the version-less alias
+- `song:<id>:unlisted => <whatever>` -- if key exists, this song will not be listed in the default songbook
 
 ### Authentication keys
 
-`key:song:<id>|key:book:<id> => ugly_random_string`: key needed to update that alias (the user must supply this in update requests, otherwise unauthorized)
+- `key:song:<id>|key:book:<id> => ugly_random_string`: key needed to update that alias (the user must supply this in update requests, otherwise unauthorized)
 
 Note about usage: when creating something, this key will be generated and stored in the user's browser, and may be e.g. emailed to them (or they can just ask me for it :D)
 
