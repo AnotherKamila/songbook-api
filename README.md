@@ -2,6 +2,10 @@
 
 This is the backend/API for my songbook -- see [the frontend's README](https://github.com/AnotherKamila/songbook-web) for more info.
 
+[![Heroku status](https://heroku-badge.herokuapp.com/?app=spevnik47-api)](https://spevnik47-api.herokuapp.com/)
+[![Requirements Status](https://requires.io/github/AnotherKamila/songbook-api/requirements.svg?branch=master)](https://requires.io/github/AnotherKamila/songbook-api/requirements/?branch=master)
+[![Floobits Status](https://floobits.com/kamila/songbook.svg)](https://floobits.com/kamila/songbook/redirect)
+
 Development Quick Start
 -----------------------
 
