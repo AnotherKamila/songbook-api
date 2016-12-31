@@ -17,7 +17,7 @@ Conventions in this document
 Concepts, notes
 ---------------
 
-Songbooks and songs are versioned, and old versions are not allowed to change. (Note: use SETNX and such.) For every songbook/song there is also a pointer to the latest version (I will call this "alias"), and usually stuff uses that alias to refer to "whatever the newest version is" instead of refering to a specific version.
+Songbooks and songs are versioned, and old versions are not allowed to change. (Note: use SETNX and such.) For every songbook/song there is also a pointer to the latest version (I will call this "alias"), and usually stuff uses that alias to refer to "whatever the newest version is" instead of referring to a specific version.
 
 This is to protect data without requiring a login: "updating" things in fact means just adding a new version (not touching the old ones) and pointing the versionless alias to the newer version. This alias overwrite is therefore the only destructive operation (and therefore the only action that requires some kind of authentication).
 
@@ -30,19 +30,19 @@ Data types
 
 ### Book (Songbook)
 
-- `book:<id>:v<version> => { book:<id>|song:<id> }` -- a book may contain other books
-- `book:<id> => <newest-version-number>` -- for the version-less alias
-- `book:<id>:unlisted => <whatever>` -- if key exists, this songbook will not be listed in the songbook index
+- `book/<id>/v<version> => { book/<id>|song/<id> }` -- a book may contain other books
+- `book/<id> => <newest-version-number>` -- for the version-less alias
+- `book/<id>/unlisted => <whatever>` -- if key exists, this songbook will not be listed in the songbook index
 
 ### Song
 
-- `song:<id>:v<version> => M{ text: <text>, title: <title>, author: <author>, … }` -- all song metadata, used for the search index; and raw song text (as submitted -- not parsed)
-- `song:<id> => <newest-version-number>` -- for the version-less alias
-- `song:<id>:unlisted => <whatever>` -- if key exists, this song will not be listed in the default songbook
+- `song/<id>/v<version> => M{ text: <text>, abc: <abc>, title: <title>, author: <author>, … }` -- all song metadata, used for the search index; and raw song text and/or [ABC notation](abcnotation.com) (as submitted -- not parsed)
+- `song/<id> => <newest-version-number>` -- for the version-less alias
+- `song/<id>/unlisted => <whatever>` -- if key exists, this song will not be listed in the default songbook
 
 ### Authentication keys
 
-- `key:song:<id>|key:book:<id> => ugly_random_string`: key needed to update that alias (the user must supply this in update requests, otherwise unauthorized)
+- `key/song/<id>|key/book/<id> => ugly_random_string`: key needed to update that alias (the user must supply this in update requests, otherwise unauthorized)
 
 Note about usage: when creating something, this key will be generated and stored in the user's browser, and may be e.g. emailed to them (or they can just ask me for it :D)
 

@@ -1,4 +1,5 @@
-from . import models
+from . import viewables
+from . import very_meta
 
 import cherrypy
 
@@ -6,21 +7,21 @@ def ref2url(ref): return '/' + '/'.join(ref)
 
 def json_friendly(obj):
     """Converts Python objects into similar objects which can be JSONified."""
-    if isinstance(obj, models.Ref):
+    if isinstance(obj, very_meta.Ref):
         return repr(obj)
     if isinstance(obj, (set, list, tuple)):
-        return [ json_friendly(x) for x in obj ]
+        return [json_friendly(x) for x in obj]
     if isinstance(obj, dict):
-        return { json_friendly(k): json_friendly(v) for k, v in obj.items() }
+        return {json_friendly(k): json_friendly(v) for k, v in obj.items()}
     if isinstance(obj, (bytes, bytearray)):
-        return obj.decode(encoding='UTF-8')
+        return obj.decode(encoding='utf-8')
     else:
         return obj
 
 class http_viewer:
-    """Translates models into HTTP responses."""
-    def OK(data):
-        return json_friendly(data.contents)
+    """Translates viewables into HTTP responses."""
+    def OK(viewable):
+        return json_friendly(viewable.data)
 
     def Alias(to):
         raise cherrypy.HTTPRedirect(ref2url(to), 302)
@@ -40,13 +41,12 @@ class Root(object):
         self.db = db_conn
 
     def GET(self, *args):
-        if len(args) < 2: return { 'api_docs': 'TODO' }
-        ref = models.Ref(args)
+        if len(args) < 1: return {'api_docs': 'TODO'}
+        ref = very_meta.Ref(args)
 
-        typename = ref[models.Ref.TYPE]
         try:
-            return models.type_map[typename].load(self.db, ref).view(http_viewer)
-        except (KeyError, models.NotFound) as e:
+            return very_meta.type_map[ref.typename].load(self.db, ref).view(http_viewer)
+        except (KeyError, very_meta.NotFound) as e:
             http_viewer.NotFound(e)
 
 cpconfig = {
