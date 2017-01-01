@@ -6,8 +6,8 @@ class NotFound(Exception): pass
 class Viewable:
     def __init__(self, ref):
         self.ref = Ref(ref)
-        assert(self.TYPENAME == ref.typename,
-               'Cannot load "{}" as {}'.format(ref, self.__class__.__name__))
+        assert self.TYPENAME == ref.typename, \
+               'Cannot load "{}" as {}'.format(ref, self.__class__.__name__)
 
     @classmethod
     def load(cls, db, ref):
@@ -28,17 +28,15 @@ class VersionedMixin:
         super(VersionedMixin, self).__init__(ref)
         self.version = None
         if len(self.ref) > self.REF_COMPONENTS['version']:
-            self.version = self.ref[self.REF_INDEX_VERSION]
+            self.version = self.ref[self.REF_COMPONENTS['version']]
+            self.resolved_ref = self.ref
         self.resolved_version = self.version
 
     def resolve_version(self, db, ref):
         if self.resolved_version is None:
             self.resolved_version = db.get(self.ref)
-            print('VersionedMixin: resolving version:', self.ref, '->', self.resolved_version)
-
-    @property
-    def resolved_ref(self):
-        return refjoin(self.ref, [self.resolved_version])
+            self.resolved_ref = refjoin(self.ref, [self.resolved_version])
+            print('VersionedMixin: resolved version:', self.ref, '->', self.resolved_version)
 
     @classmethod
     def load_versioned_with_op(cls, db, ref, load_op):
