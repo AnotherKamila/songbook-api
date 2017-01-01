@@ -45,7 +45,7 @@ import redis
 ##### filename manipulation #####
 
 REFSEP = '/'
-PUBLIC_BOOKS = 'public_songbooks'
+PUBLIC_LIST = 'book/public_list'
 
 def name_from_path(path):
     return os.path.splitext(os.path.basename(path))[0]
@@ -81,7 +81,6 @@ def add_book(path):
     ref = bookref(name)
     db.set(ref, VERSION)
     db.set(versioned(ref)+REFSEP+'title', name)
-    db.sadd(PUBLIC_BOOKS, ref)
 
 def add_song(filepath):
     # TODO metadata
@@ -100,6 +99,7 @@ def add_ref_to_book(book, ref):
 ##### main #####
 
 def stuff_into_redis(startdir):
+    add_book(PUBLIC_LIST)
     for childdirname in os.listdir(startdir):
         childdir = os.path.join(startdir, childdirname)
         for dirpath, dirnames, filenames in os.walk(childdir, topdown=False, followlinks=True):
@@ -117,30 +117,26 @@ def stuff_into_redis(startdir):
                 print("    * book: {}".format(dirname))
                 add_ref_to_book(bookref(dirpath), bookref(dirname))
 
+            add_ref_to_book(PUBLIC_LIST, bookref(dirpath))
             print()
 
-def show_db():
-    for book in db.smembers(PUBLIC_BOOKS):
-        book = book.decode("utf-8")
-        vbook = book+REFSEP+db.get(book).decode("utf-8")
-        title = db.get(vbook+REFSEP+'title').decode("utf-8")
-        print('\n{}: {}'.format(title, vbook))
-        for ref in db.smembers(vbook):
-            ref = ref.decode("utf-8")
-            vref = ref+REFSEP+(db.get(ref).decode('utf-8'))
-            reftype = vref.split(REFSEP)[0]
-            assert reftype in ('book', 'song')
-            if reftype == 'song':
-                title = db.hget(vref, 'title').decode('utf-8')
-                print('    - song: {} ({})'.format(title, ref))
-            else:
-                title = db.get(vref+REFSEP+'title').decode('utf-8')
-                print('    * book: {} ({})'.format(title, ref))
+def show_ref(ref, depth=0):
+    reftype = ref.split(REFSEP)[0]
+    assert reftype in ('book', 'song')
+    vref = ref+REFSEP+(db.get(ref).decode('utf-8'))
+    if reftype == 'song':
+        title = db.hget(vref, 'title').decode('utf-8')
+        yield '{}song: {} ({})'.format(' '*2*depth, title, vref)
+    else:
+        title = db.get(vref+REFSEP+'title').decode('utf-8')
+        yield '{}book: {} ({})'.format(' '*2*depth, title, vref)
+        for child in db.smembers(vref):
+            for x in show_ref(child.decode("utf-8"), depth+1): yield x
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print('Usage: {} <startdir>'.format(sys.argv[0]))
         sys.exit(47)
     stuff_into_redis(sys.argv[1])
-    print('========= verification: public books in DB: =========')
-    show_db()
+    print('========= verification: public list: =========')
+    for line in show_ref(PUBLIC_LIST): print(line)
