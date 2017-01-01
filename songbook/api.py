@@ -8,7 +8,7 @@ def ref2url(ref): return '/' + '/'.join(ref)
 def json_friendly(obj):
     """Converts Python objects into similar objects which can be JSONified."""
     if isinstance(obj, very_meta.Ref):
-        return repr(obj)
+        return ref2url(obj)
     if isinstance(obj, (set, list, tuple)):
         return [json_friendly(x) for x in obj]
     if isinstance(obj, dict):

@@ -1,4 +1,4 @@
-from .ref import Ref
+from .ref import Ref, refjoin
 
 class NotFound(Exception): pass
 
@@ -18,15 +18,16 @@ class Viewable:
 
 def extra_ref_components(*args):
     def add_ref_components(cls):
-        cls.EXTRA_REF_COMPONENTS = {args[i]: i+1 for i in range(len(args))}  # 0 is type
+        cls.REF_COMPONENTS = {args[i]: i+1 for i in range(len(args))}  # 0 is type
         return cls
     return add_ref_components
+
 
 class VersionedMixin:
     def __init__(self, ref):
         super(VersionedMixin, self).__init__(ref)
         self.version = None
-        if len(self.ref) > self.EXTRA_REF_COMPONENTS['version']:
+        if len(self.ref) > self.REF_COMPONENTS['version']:
             self.version = self.ref[self.REF_INDEX_VERSION]
         self.resolved_version = self.version
 
@@ -37,7 +38,7 @@ class VersionedMixin:
 
     @property
     def resolved_ref(self):
-        return Ref(list(self.ref) + [self.resolved_version])
+        return refjoin(self.ref, [self.resolved_version])
 
     @classmethod
     def load_versioned_with_op(cls, db, ref, load_op):

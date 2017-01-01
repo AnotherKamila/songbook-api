@@ -1,3 +1,5 @@
+from itertools import chain
+
 KEYSEP = '/'
 
 def to_utf8(x):
@@ -27,3 +29,6 @@ class Ref(tuple):
 
     def __repr__(self):
         return KEYSEP.join(self)
+
+def refjoin(*args):
+    return Ref(list(chain(*args)))
