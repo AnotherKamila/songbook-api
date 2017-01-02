@@ -29,27 +29,12 @@ class VersionedMixin:
         if len(self.ref) > self.REF_COMPONENTS['version']:
             self.resolved_ref = self.ref
 
-    @classmethod
-    def resolve_ref(cls, db, ref):
-        resolved_version = db.get(ref)
-        if not resolved_version: raise NotFound
-        print('VersionedMixin: resolved version:', ref, '->', resolved_version)
-        return refjoin(ref, resolved_version)
-
-    def load(self, db, fromref=None):
+    def resolve_ref(self, db):
         if not self.resolved_ref:
-            self.resolved_ref = self.resolve_ref(db, fromref or self.ref)
-        print('loading from DB:', self.resolved_ref)
-        super(VersionedMixin, self).load(db, self.resolved_ref)
-        return self
-
-    def view(self, viewer):
-        """May only be called after `load()`."""
-        if self.ref == self.resolved_ref:
-            return viewer.OK(self)
-        else:
-            return viewer.Alias(self.resolved_ref)
-
+            resolved_version = db.get(self.ref)
+            if not resolved_version: raise NotFound
+            print('VersionedMixin: resolved version:', self.ref, '->', resolved_version)
+            self.resolved_ref = refjoin(self.ref, resolved_version)
 
 type_map = {}
 
