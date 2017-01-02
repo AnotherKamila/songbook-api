@@ -34,7 +34,6 @@ $ tree -l
 
 5 directories, 19 files
 ```
-
 """
 
 import os
@@ -42,35 +41,39 @@ import sys
 
 import redis
 
-##### filename manipulation #####
+from songbook.ref import Ref, refjoin, is_reflike
+from songbook.db_conventions import PUBLIC_LIST, refjoin
 
-REFSEP = '/'
-PUBLIC_LIST = 'book/public_list'
+##### filename manipulation #####
 
 def name_from_path(path):
     return os.path.splitext(os.path.basename(path))[0]
 
 def normalized(path):
-    TRANSLIT_FROM = ' áčďéíľĺňóôŕřšťúůýž'
-    TRANSLIT_TO   = '-acdeillnoorrstuuyz'
+    TRANSLIT_FROM = ' àáäâæçčďèéëêěìíïîľĺňñòóöôŕřšßťùúüůûýž'
+    TRANSLIT_TO   = '-aaaaeccdeeeeeiiiillnnoooorrsstuuuuuyz'
 
-    lname = name_from_path(path).lower()
+    lname = name_from_path(path).lower().strip()
     for ca, cb in zip(TRANSLIT_FROM, TRANSLIT_TO):
         lname = lname.replace(ca, cb)
+    lname = lname.replace(r'[^a-zA-Z0-9_-\/]', '-')
+
     return lname
 
-def songref(filename):
-    return 'song'+REFSEP+normalized(filename)
+def songref(name):
+    print(normalized(name))
+    print(refjoin('song', normalized(name)))
+    return refjoin('song', normalized(name))
 
-def bookref(dirname):
-    return 'book'+REFSEP+normalized(dirname)
+def bookref(name):
+    return refjoin('book', normalized(name))
 
 ##### database #####
 
 # TODO support versioning :D
 VERSION = 'v0'
 def versioned(ref):
-    return ref+REFSEP+VERSION
+    return refjoin(ref, VERSION)
 
 db_url = os.environ.get('REDIS_URL')
 if not db_url: sys.exit('REDIS_URL not set, exiting.')
@@ -80,7 +83,7 @@ def add_book(path):
     name = name_from_path(path)
     ref = bookref(name)
     db.set(ref, VERSION)
-    db.set(versioned(ref)+REFSEP+'title', name)
+    db.hmset(versioned(ref), {'title': name})
 
 def add_song(filepath):
     # TODO metadata
@@ -94,7 +97,7 @@ def add_song(filepath):
         })
 
 def add_ref_to_book(book, ref):
-    db.sadd(versioned(book), ref)
+    db.sadd(refjoin(versioned(book), 'contents'), ref)
 
 ##### main #####
 
@@ -121,17 +124,17 @@ def stuff_into_redis(startdir):
             print()
 
 def show_ref(ref, depth=0):
-    reftype = ref.split(REFSEP)[0]
-    assert reftype in ('book', 'song')
-    vref = ref+REFSEP+(db.get(ref).decode('utf-8'))
-    if reftype == 'song':
+    ref = Ref.from_str(ref)
+    assert ref.typename in ('book', 'song')
+    vref = refjoin(ref, db.get(ref))
+    if ref.typename == 'song':
         title = db.hget(vref, 'title').decode('utf-8')
         yield '{}song: {} ({})'.format(' '*2*depth, title, vref)
     else:
-        title = db.get(vref+REFSEP+'title').decode('utf-8')
+        title = db.hget(vref, 'title').decode('utf-8')
         yield '{}book: {} ({})'.format(' '*2*depth, title, vref)
-        for child in db.smembers(vref):
-            for x in show_ref(child.decode("utf-8"), depth+1): yield x
+        for child in db.smembers(refjoin(vref, 'contents')):
+            for x in show_ref(child, depth+1): yield x
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:

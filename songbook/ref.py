@@ -7,6 +7,9 @@ def to_utf8(x):
         return x.decode(encoding='utf-8')
     return str(x)
 
+def is_reflike(x):
+    return isinstance(x, (tuple, list, Ref))
+
 class Ref(tuple):
     """Uniquely identifies an object stored in the database.
 
@@ -31,4 +34,5 @@ class Ref(tuple):
         return KEYSEP.join(self)
 
 def refjoin(*args):
+    args = [a if is_reflike(a) else Ref.from_str(a) for a in args]
     return Ref(list(chain(*args)))

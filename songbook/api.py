@@ -45,7 +45,7 @@ class Root(object):
         ref = very_meta.Ref(args)
 
         try:
-            return very_meta.type_map[ref.typename].load(self.db, ref).view(http_viewer)
+            return very_meta.type_map[ref.typename](ref).load(self.db).view(http_viewer)
         except (KeyError, very_meta.NotFound) as e:
             http_viewer.NotFound(e)
 
