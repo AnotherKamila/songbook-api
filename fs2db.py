@@ -37,18 +37,22 @@ $ tree -l
 """
 
 import os
+import re
 import sys
+
 
 import redis
 
 from songbook.ref import Ref, refjoin, is_reflike
-from songbook.db_conventions import PUBLIC_LIST, refjoin
+from songbook.db_conventions import PUBLIC_BOOKS_LIST, PUBLIC_SONGS_LIST, contents_ref
 
 ##### filename manipulation #####
 
 def name_from_path(path):
     return os.path.splitext(os.path.basename(path))[0]
 
+# TODO normalized is not this-specific -- should be split from path manip and
+# put into db_conventions
 def normalized(path):
     TRANSLIT_FROM = ' àáäâæçčďèéëêěìíïîľĺňñòóöôŕřšßťùúüůûýž'
     TRANSLIT_TO   = '-aaaaeccdeeeeeiiiillnnoooorrsstuuuuuyz'
@@ -61,12 +65,32 @@ def normalized(path):
     return lname
 
 def songref(name):
-    print(normalized(name))
-    print(refjoin('song', normalized(name)))
     return refjoin('song', normalized(name))
 
 def bookref(name):
     return refjoin('book', normalized(name))
+
+##### parsing file contents #####
+# this is all temporary :D
+# right?! :D
+
+def parse_txt(text):
+    """My custom text+chords format."""
+    for pat in r'//.*$', r'[\t ]+$':
+        text = re.sub(pat, '', text)
+    text = re.sub('\r?\n(\r?\n)+', '\n\n', text)
+    first_sec, rest = text.split('\n\n', 1)
+    data = {'text': text}
+    for line in first_sec.split('\n'):
+        meta_match = re.match(r'^(\w+)\s*:\s*(.*)$', line)
+        if not meta_match: return {'text': text}  # this is not a meta section
+        key, value = meta_match.group(1, 2)
+        data[normalized(key)] = value
+    return data
+
+parsers = {
+    '.txt': parse_txt,
+}
 
 ##### database #####
 
@@ -86,42 +110,45 @@ def add_book(path):
     db.hmset(versioned(ref), {'title': name})
 
 def add_song(filepath):
-    # TODO metadata
-
     ref = songref(filepath)
+    ext = os.path.splitext(filepath)[1]
     db.set(ref, VERSION)
     with open(filepath) as file:
-        db.hmset(versioned(ref), {
-            'title': name_from_path(filepath),
-            'text':  file.read(),
-        })
+        db.hmset(versioned(ref), parsers[ext](file.read()))
 
 def add_ref_to_book(book, ref):
-    db.sadd(refjoin(versioned(book), 'contents'), ref)
+    db.sadd(contents_ref(versioned(book)), ref)
 
 ##### main #####
 
 def stuff_into_redis(startdir):
-    add_book(PUBLIC_LIST)
+    add_book(PUBLIC_BOOKS_LIST)
+    add_book(PUBLIC_SONGS_LIST)
     for childdirname in os.listdir(startdir):
         childdir = os.path.join(startdir, childdirname)
         for dirpath, dirnames, filenames in os.walk(childdir, topdown=False, followlinks=True):
 
             print('{}:'.format(name_from_path(dirpath)))
             add_book(dirpath)
+            add_ref_to_book(PUBLIC_BOOKS_LIST, bookref(dirpath))
 
             for filename in filenames:
                 path = os.path.join(dirpath, filename)
                 print("    - song: {}".format(filename))
                 add_song(path)
+                add_ref_to_book(PUBLIC_SONGS_LIST, songref(path))
                 add_ref_to_book(bookref(dirpath), songref(path))
 
             for dirname in dirnames:
                 print("    * book: {}".format(dirname))
                 add_ref_to_book(bookref(dirpath), bookref(dirname))
 
-            add_ref_to_book(PUBLIC_LIST, bookref(dirpath))
+            add_ref_to_book(PUBLIC_SONGS_LIST, bookref(dirpath))
             print()
+
+def hgets(ref, key):
+    x = db.hget(ref, key)
+    return x.decode('utf-8') if x else None
 
 def show_ref(ref, depth=0):
     ref = Ref.from_str(ref)
@@ -129,11 +156,12 @@ def show_ref(ref, depth=0):
     vref = refjoin(ref, db.get(ref))
     if ref.typename == 'song':
         title = db.hget(vref, 'title').decode('utf-8')
-        yield '{}song: {} ({})'.format(' '*2*depth, title, vref)
+        artist = hgets(vref, 'artist')
+        yield '{}song: {} - {} ({})'.format(' '*2*depth, title, artist, vref)
     else:
-        title = db.hget(vref, 'title').decode('utf-8')
+        title  = hgets(vref, 'title')
         yield '{}book: {} ({})'.format(' '*2*depth, title, vref)
-        for child in db.smembers(refjoin(vref, 'contents')):
+        for child in db.smembers(contents_ref(vref)):
             for x in show_ref(child, depth+1): yield x
 
 if __name__ == '__main__':
@@ -142,4 +170,4 @@ if __name__ == '__main__':
         sys.exit(47)
     stuff_into_redis(sys.argv[1])
     print('========= verification: public list: =========')
-    for line in show_ref(PUBLIC_LIST): print(line)
+    for line in show_ref(PUBLIC_BOOKS_LIST): print(line)
