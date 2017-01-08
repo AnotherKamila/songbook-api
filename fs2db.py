@@ -60,7 +60,8 @@ def normalized(path):
     lname = name_from_path(path).lower().strip()
     for ca, cb in zip(TRANSLIT_FROM, TRANSLIT_TO):
         lname = lname.replace(ca, cb)
-    lname = lname.replace(r'[^a-zA-Z0-9_-\/]', '-')
+    lname = re.sub(r'[\'"!?]', '', lname)
+    lname = re.sub(r'[^a-zA-Z0-9_\/]', '-', lname)
 
     return lname
 
@@ -76,7 +77,7 @@ def bookref(name):
 
 def parse_txt(text):
     """My custom text+chords format."""
-    for pat in r'//.*$', r'[\t ]+$':
+    for pat in r'^#.*$', r'[\t ]+$':
         text = re.sub(pat, '', text)
     text = re.sub('\r?\n(\r?\n)+', '\n\n', text)
     first_sec, rest = text.split('\n\n', 1)
@@ -88,8 +89,23 @@ def parse_txt(text):
         data[normalized(key)] = value
     return data
 
+def parse_abc(abc):
+    """Parses metadata from the ABC music notation."""
+    key_names = {
+        'C': 'artist',
+        'T': 'title',
+    }
+    data = {'abc': abc}
+    for line in abc.split('\n'):
+        for k in key_names:
+            if line.startswith(k+':'):
+                v = line.split(':', 1)[1]
+                data[key_names[k]] = v
+    return data
+
 parsers = {
     '.txt': parse_txt,
+    '.abc': parse_abc,
 }
 
 ##### database #####
@@ -110,8 +126,11 @@ def add_book(path):
     db.hmset(versioned(ref), {'title': name})
 
 def add_song(filepath):
-    ref = songref(filepath)
     ext = os.path.splitext(filepath)[1]
+    if not ext in parsers:
+        print("W: No parser for {}, skipping".format(ext))
+        return None
+    ref = songref(filepath)
     db.set(ref, VERSION)
     with open(filepath) as file:
         db.hmset(versioned(ref), parsers[ext](file.read()))
@@ -143,7 +162,6 @@ def stuff_into_redis(startdir):
                 print("    * book: {}".format(dirname))
                 add_ref_to_book(bookref(dirpath), bookref(dirname))
 
-            add_ref_to_book(PUBLIC_SONGS_LIST, bookref(dirpath))
             print()
 
 def hgets(ref, key):
