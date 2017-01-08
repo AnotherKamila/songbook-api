@@ -32,7 +32,7 @@ class VersionedMixin:
     def resolve_ref(self, db):
         if not self.resolved_ref:
             resolved_version = db.get(self.ref)
-            if not resolved_version: raise NotFound
+            if not resolved_version: raise NotFound("Could not resolve `{}'".format(self.ref))
             print('VersionedMixin: resolved version:', self.ref, '->', resolved_version)
             self.resolved_ref = refjoin(self.ref, resolved_version)
 

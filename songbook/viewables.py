@@ -1,4 +1,4 @@
-from .very_meta import Viewable, VersionedMixin, extra_ref_components, typename, type_map
+from .very_meta import Viewable, VersionedMixin, NotFound, extra_ref_components, typename, type_map
 from .ref import Ref, refjoin
 from .db_conventions import contents_ref
 
@@ -31,7 +31,11 @@ class Book(Item):
     @classmethod
     def load_child(cls, db, ref):
         ref = Ref.from_str(ref)
-        data = type_map[ref.typename](ref).load_meta(db).data
+        data = {}
+        try:
+            data = type_map[ref.typename](ref).load_meta(db).data
+        except NotFound:
+            data['error'] = 'Not found'
         data['ref'] = ref
         return data
 
