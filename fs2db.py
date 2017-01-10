@@ -173,7 +173,7 @@ def show_ref(ref, depth=0):
     assert ref.typename in ('book', 'song')
     vref = refjoin(ref, db.get(ref))
     if ref.typename == 'song':
-        title = db.hget(vref, 'title').decode('utf-8')
+        title =  hgets(vref, 'title')
         artist = hgets(vref, 'artist')
         yield '{}song: {} - {} ({})'.format(' '*2*depth, title, artist, vref)
     else:
