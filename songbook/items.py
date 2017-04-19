@@ -1,4 +1,4 @@
-from .very_meta import Viewable, VersionedMixin, NotFound, extra_ref_components, typename, type_map
+from .very_meta import SavedObject, VersionedMixin, NotFound, extra_ref_components, typename, type_map
 from .ref import Ref, refjoin
 from .db_conventions import contents_ref
 
@@ -7,7 +7,7 @@ def getmeta(db, ref):
     values = db.hmget(ref, INTERESTING_METADATA)
     return dict(zip(INTERESTING_METADATA, values))
 
-class Item(VersionedMixin, Viewable):
+class Item(VersionedMixin, SavedObject):
     def load_meta(self, db, fromref=None):
         self.resolve_ref(db)
         self.data = getmeta(db, self.resolved_ref)
@@ -16,6 +16,16 @@ class Item(VersionedMixin, Viewable):
     def load(self, db, fromref=None):
         self.resolve_ref(db)
         self.data = db.hgetall(self.resolved_ref)
+        return self
+
+    def set(self, data):
+        self.data = data
+        return self
+
+    def save(self, db):
+        self.new_version(db)
+        for k, v in self.data.items():
+            db.hset(self.ref, k, v)
         return self
 
     def view(self, viewer):

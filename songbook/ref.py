@@ -1,11 +1,7 @@
 from itertools import chain
+from .utils import to_utf8
 
 KEYSEP = '/'
-
-def to_utf8(x):
-    if isinstance(x, (bytes, bytearray)):
-        return x.decode(encoding='utf-8')
-    return str(x)
 
 def is_reflike(x):
     return isinstance(x, (tuple, list, Ref))
