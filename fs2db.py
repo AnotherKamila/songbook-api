@@ -128,12 +128,13 @@ def add_book(path):
 def add_song(filepath):
     ext = os.path.splitext(filepath)[1]
     if not ext in parsers:
-        print("W: No parser for {}, skipping".format(ext))
+        print("W: No parser for {}, skipping {}".format(ext, filepath))
         return None
     ref = songref(filepath)
     db.set(ref, VERSION)
     with open(filepath) as file:
         db.hmset(versioned(ref), parsers[ext](file.read()))
+    return ref
 
 def add_ref_to_book(book, ref):
     db.sadd(contents_ref(versioned(book)), ref)
@@ -153,10 +154,10 @@ def stuff_into_redis(startdir):
 
             for filename in filenames:
                 path = os.path.join(dirpath, filename)
-                print("    - song: {}".format(filename))
-                add_song(path)
-                add_ref_to_book(PUBLIC_SONGS_LIST, songref(path))
-                add_ref_to_book(bookref(dirpath), songref(path))
+                if add_song(path):
+                    print("    - song: {}".format(filename))
+                    add_ref_to_book(PUBLIC_SONGS_LIST, songref(path))
+                    add_ref_to_book(bookref(dirpath), songref(path))
 
             for dirname in dirnames:
                 print("    * book: {}".format(dirname))
